@@ -1239,6 +1239,10 @@ private:
     bool managedoperation;  // indicates whether changes to properties are the deed of SketchObject
                             // or not (for input validation)
 
+    // Set while a caller that calls solve() right afterwards updates the constraints' geometry keys:
+    // onConstraintsChanged() then leaves setting up and diagnosing the solver to that solve().
+    bool solveFollows = false;
+
     // mapping from ExternalGeometry[*] to ExternalGeo[*].Id
     // Some external geometry may generate more than one projection
     std::map<std::string, std::vector<long>> externalGeoRefMap;
