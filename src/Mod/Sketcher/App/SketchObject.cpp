@@ -324,9 +324,19 @@ App::DocumentObjectExecReturn* SketchObject::execute()
         return new App::DocumentObjectExecReturn(e.what());
     }
 
+    // solve(true) below sets up and diagnoses the sketch, unless the solver preference is invalid
+    bool solveReached = true;
+    try {
+        getDefaultSolver();
+    }
+    catch (const Base::Exception&) {
+        solveReached = false;
+    }
+
     // setup and diagnose the sketch
     try {
         rebuildExternalGeometry();
+        Base::StateLocker lock(solveFollows, solveReached);
         Constraints.acceptGeometry(getCompleteGeometry());
     }
     catch (const Base::Exception&) {
@@ -1157,6 +1167,9 @@ void SketchObject::onConstraintsChanged()
             QT_TRANSLATE_NOOP("Notifications", "Unmanaged change of Constraint "
                               "Property results in invalid constraint indices") "\n");
     }
+    if (solveFollows) {
+        return;
+    }
     Base::StateLocker lock(internaltransaction, true);
     setUpSketch();
 }
@@ -1350,7 +1363,11 @@ void SketchObject::onUndoRedoFinished()
     // prevents solve() from working before such a recompute in case it is redoing an operation with
     // invalid data.
     Constraints.checkConstraintIndices(getHighestCurveIndex(), -getExternalGeometryCount());
-    acceptGeometry();
+    {
+        // solve() below sets up and diagnoses the sketch
+        Base::StateLocker lock(solveFollows, true);
+        acceptGeometry();
+    }
     synchroniseGeometryState();
     solve();
 }
